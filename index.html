@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Criptografia e Descriptografia de Mensagens</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+
+<body>
+    <div class="container">
+        <h2>Criptografar Mensagem</h2>
+        <div class="tab">
+            <button class="tablinks" onclick="openTab(event, 'Encrypt')" id="defaultOpen">Criptografar</button>
+            <button class="tablinks" onclick="openTab(event, 'Decrypt')">Descriptografar</button>
+        </div>
+
+        <div id="Encrypt" class="tabcontent">
+            <textarea id="message" placeholder="Digite sua mensagem aqui"></textarea>
+            <button id="encryptBtn">Criptografar</button>
+            <p id="encryptedMessage"></p>
+        </div>
+
+        <div id="Decrypt" class="tabcontent">
+            <h2>Descriptografar Mensagem</h2>
+            <textarea id="encryptedMessageInput" placeholder="Coloque o texto criptografado"></textarea>
+            <button id="decryptBtn">Descriptografar</button>
+            <p id="originalMessage"></p>
+        </div>
+    </div>
+
+    <script src="src/crypto.js"></script>
+    <script>
+        function openTab(evt, tabName) {
+            const tabcontent = document.getElementsByClassName("tabcontent");
+            for (let i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+            const tablinks = document.getElementsByClassName("tablinks");
+            for (let i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+            document.getElementById(tabName).style.display = "block";
+            evt.currentTarget.className += " active";
+        }
+
+        document.getElementById("defaultOpen").click();
+
+        let publicKey;
+        async function encryptAndDisplay() {
+            const message = document.getElementById("message").value;
+            if (!publicKey) {
+                const keyPair = await generateKeyPair();
+                publicKey = keyPair.publicKey;
+                localStorage.setItem("privateKey", JSON.stringify(await window.crypto.subtle.exportKey("jwk", keyPair.privateKey)));
+            }
+            const encryptedMessage = await encryptMessage(publicKey, message);
+            document.getElementById("encryptedMessage").innerText = arrayBufferToBase64(encryptedMessage);
+        }
+
+        document.getElementById("encryptBtn").addEventListener("click", encryptAndDisplay);
+
+        async function decryptAndDisplay() {
+            const encryptedMessage = document.getElementById("encryptedMessageInput").value;
+            const privateKeyJWK = JSON.parse(localStorage.getItem("privateKey"));
+            const privateKey = await window.crypto.subtle.importKey("jwk", privateKeyJWK, {
+                name: "RSA-OAEP",
+                hash: "SHA-256",
+            }, true, ["decrypt"]);
+            const decryptedMessage = await decryptMessage(privateKey, base64ToArrayBuffer(encryptedMessage));
+            document.getElementById("originalMessage").innerText = decryptedMessage;
+        }
+
+        document.getElementById("decryptBtn").addEventListener("click", decryptAndDisplay);
+    </script>
+</body>
+
+</html>
